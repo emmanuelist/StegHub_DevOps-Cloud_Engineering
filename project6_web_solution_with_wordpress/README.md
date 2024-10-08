@@ -80,9 +80,9 @@ sudo pvcreate /dev/nvme3n1p1
 
 ```bash
 sudo pvcreate /dev/nvme1n1p1 /dev/nvme2n1p1 /dev/nvme3n1p1
-sudo vgcreate webdata-vg /dev/nvme1n1p1 /dev/nvme2n1p1 /dev/nvme3n1p1
-sudo lvcreate -n app-lv -L 14G webdata-vg
-sudo lvcreate -n logs-lv -L 14G webdata-vg
+sudo vgcreate my_volume_group /dev/nvme1n1p1 /dev/nvme2n1p1 /dev/nvme3n1p1
+sudo lvcreate -n app-lv -L 14G my_volume_group
+sudo lvcreate -n logs-lv -L 14G my_volume_group
 ```
 
 Verify that the physical volume has been created `sudo pvs`
@@ -92,17 +92,74 @@ Verify that the physical volume has been created `sudo pvs`
 ### Format and Mount the Logical Volumes
 
 ```bash
-sudo mkfs -t ext4 /dev/webdata-vg/app-lv
-sudo mkfs -t ext4 /dev/webdata-vg/logs-lv
+sudo mkfs -t ext4 /dev/my_volume_group/app-lv
+sudo mkfs -t ext4 /dev/my_volume_group/logs-lv
 sudo mkdir -p /var/www/html /home/recovery/logs
-sudo mount /dev/webdata-vg/app-lv /var/www/html
+sudo mount /dev/my_volume_group/app-lv /var/www/html
 sudo rsync -av /var/log/. /home/recovery/logs/
-sudo mount /dev/webdata-vg/logs-lv /var/log
+sudo mount /dev/my_volume_group/logs-lv /var/log
 ```
 
 ![format_the_logical_volumes_with_ext4_filesystem](https://github.com/user-attachments/assets/f0dd225f-c9b8-414d-8827-f605999573e8)
 
----
+#### Verify the setup by running sudo vgs
+
+```bash
+sudo vgs
+
+```
+
+Create 2 logical volumes; app-lv and logs-lv.
+
+```bash
+sudo lvcreate -n app-lv -L 14G webdata-vg
+sudo lvcreate -n logs-lv -L 14G webdata-vg
+```
+
+![create_lvcreate_utility](./images/create_lvcreate_utility.png)
+Verify that the logical volumes has been created `sudo lvs`
+
+Verify the entire setup to be sure all has been configured properly
+
+```bash
+sudo vgdisplay -v #view complete setup - VG, PV, and LV
+sudo lsblk
+```
+
+![verify_setup_using_sudo_vgdisplay_-v](./images/verify_setup_using_sudo_vgdisplay_-v.png)
+
+format the logical volumes using ext4 filesystems
+
+```bash
+sudo mkfs -t ext4 /dev/webdata-vg/apps-lv
+sudo mkfs -t ext4 /dev/webdata-vg/logs-lv
+```
+
+Create a directory to store website file
+
+```bash
+sudo mkdir -p /var/www/html
+```
+
+Create another directory for the log files
+
+```bash
+sudo mkdir -p /home/recovery/logs
+```
+
+Mount the newly created directory for website files on the app logical volume we earlier created
+
+```bash
+sudo mount /dev/webdata-vg/apps-lv /var/www/html/
+```
+
+Back up all the files on the logs logical volume before mounting, this is done using rsync utility
+
+```bash
+sudo rsync -av /var/log/. /home/recovery/logs/
+```
+
+![rsync_utility_to_backup_files_in_the_log](./images/rsync_utility_to_backup_files_in_the_log.png)
 
 ## Part 2: Configure MySQL on the Database Server
 
@@ -146,7 +203,51 @@ sudo systemctl start httpd
 sudo systemctl enable httpd
 ```
 
+Install php and all its dependencies
+
+```bash
+sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+
+sudo yum install yum-utils http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+
+sudo yum module list php sudo yum module reset php
+
+sudo yum module enable php:remi-7.4
+
+sudo yum install php php-opcache php-gd php-curl php-mysqlnd
+
+sudo systemctl start php-fpm
+
+sudo systemctl enable php-fpm setsebool -P httpd_execmem 1
+```
+
 ![install_httpd_php_php-mysqlnd_php-fpm_php-json](https://github.com/user-attachments/assets/ab0e1d05-1ffd-46bf-8e34-53c9d678d7d1)
+
+Restart Apache
+
+```bash
+sudo systemctl restart httpd
+```
+
+![httpd_status](httpd_status.png)
+
+Create an info.php page to test if your configuration is correct
+
+```bash
+sudo vi /var/www/html/info.php
+```
+
+write the following code to check php config
+
+```bash
+<?php
+phpinfo();
+?>
+```
+
+Visit your IPaddress/info.php
+![info_php](info_php.png)
+![alt text](access_to_redhat_locally_via_instance.png)
 
 ### 2. Download and Configure WordPress
 
@@ -156,8 +257,6 @@ tar xzvf latest.tar.gz
 sudo cp -R wordpress/* /var/www/html/
 sudo chown -R apache:apache /var/www/html/
 ```
-
-![mount_wordpress_webserver](https://github.com/user-attachments/assets/d36ab0fa-ffd9-4f10-be3f-e192f0bf30de)
 
 ### 3. Configure SELinux and Firewall for Apache
 
