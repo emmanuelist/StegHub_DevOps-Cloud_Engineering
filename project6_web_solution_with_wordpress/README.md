@@ -25,18 +25,28 @@ In this project, you’ll set up a basic WordPress-based web solution using two 
 - Launch an EC2 instance with RedHat or CentOS to serve as your Web Server.
 - Create and attach three EBS volumes, each with a size of 10 GiB, to the instance.
 
-![add_volume_on_webserver_instance](https://github.com/user-attachments/assets/6ad347...)
+![add_volume_on_webserver_instance](./images/webserver_redhat.png)
 
-### 2. SSH into the Instance and Verify Volumes
+### SSH into the Instance and Verify Volumes
 
 ```bash
 ssh -i keypair.pem ec2-user@<public-ip>
+```
+
+### Then launch your instance.
+
+Confirm your volumes are up and in use.
+![add-volumes](./images/add_volume_on_webserver_instance.png)
+
+### List attached volumes
+
+```bash
 lsblk
 ```
 
 ![lsblk_utility](https://github.com/user-attachments/assets/91038661-d5ef-4f40-be8a-8773672b9832)
 
-### 3. Partition the Volumes
+### Partition the Volumes
 
 ```bash
 sudo gdisk /dev/nvme1n1
@@ -47,19 +57,39 @@ sudo gdisk /dev/nvme1n1
 
 ![sudo_gdisk](https://github.com/user-attachments/assets/96fd40b5-10df-4b7a-8853-68a59b438efa)
 
-### 4. Install LVM and Configure Logical Volumes
+Install lvm2 package. Lvm2 is used for managing disk drives and other storage devices
 
 ```bash
-sudo yum install -y lvm2
+sudo yum install lvm2
+```
+
+![install_lvm2](./images/install_lvm2.png)
+
+Run `sudo lvmdiskscan` to check for available partitions.
+Use the pvcreate utility tool to mark each of the volumes as physical volumes
+
+```bash
+sudo pvcreate /dev/nvme1n1p1
+sudo pvcreate /dev/nvme2n1p1
+sudo pvcreate /dev/nvme3n1p1
+```
+
+![VG_created_and_successfully_running](./images/VG_created_and_successfully_running.png)
+
+### Configure Logical Volumes
+
+```bash
 sudo pvcreate /dev/nvme1n1p1 /dev/nvme2n1p1 /dev/nvme3n1p1
 sudo vgcreate webdata-vg /dev/nvme1n1p1 /dev/nvme2n1p1 /dev/nvme3n1p1
 sudo lvcreate -n app-lv -L 14G webdata-vg
 sudo lvcreate -n logs-lv -L 14G webdata-vg
 ```
 
+Verify that the physical volume has been created `sudo pvs`
+
 ![VG_created_and_successfully_running](https://github.com/user-attachments/assets/706e6bd2-56f9-49b9-a250-1ad151b9539e)
 
-### 5. Format and Mount the Logical Volumes
+### Format and Mount the Logical Volumes
 
 ```bash
 sudo mkfs -t ext4 /dev/webdata-vg/app-lv
