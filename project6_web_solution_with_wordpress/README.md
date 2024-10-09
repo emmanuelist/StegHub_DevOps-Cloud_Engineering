@@ -270,6 +270,20 @@ sudo firewall-cmd --reload
 
 - Go to `http://<web-server-ip>/wordpress` to complete the WordPress setup in the browser.
 
+![install_wordpress](install_wordpress.png)
+
+Site title for the site.
+Username: \***\*
+Password: \*\***
+Your Email: \*\*\*\*
+Discourage search engines from indexing this site:
+
+![wordpress_has_been_install](wordpress_has_been_install.png)
+
+![wordpress_login](wordpress_login.png)
+
 ---
 
 Congratulations! You have successfully deployed a WordPress website with a MySQL backend on AWS. Make sure to properly secure your instances and regularly backup your data.
+
+![welcome_to_wordpress](welcome_to_wordpress.png)
